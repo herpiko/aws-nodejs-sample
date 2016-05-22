@@ -14,23 +14,37 @@
  * limitations under the License.
 **/
 
-// Load the SDK and UUID
-var AWS = require('aws-sdk');
-var uuid = require('node-uuid');
 
-// Create an S3 client
-var s3 = new AWS.S3();
+var key = 'keystring';
+var secret = 'secretstring';
 
-// Create a bucket and upload something into it
-var bucketName = 'node-sdk-sample-' + uuid.v4();
-var keyName = 'hello_world.txt';
+var UploadStream = require("s3-stream-upload");
+var aws = require("aws-sdk");
+var fs = require('fs');
 
-s3.createBucket({Bucket: bucketName}, function() {
-  var params = {Bucket: bucketName, Key: keyName, Body: 'Hello World!'};
-  s3.putObject(params, function(err, data) {
-    if (err)
-      console.log(err)
-    else
-      console.log("Successfully uploaded data to " + bucketName + "/" + keyName);
-  });
-});
+aws.config.update({
+  accessKeyId: key, 
+  secretAccessKey: secret, 
+  endpoint : 'kilatstorage.com'
+})
+
+var S3 = aws.S3;
+var s3 = new S3();
+var key = "file.mp3";
+
+s3.createBucket({
+    Bucket: "my-bucket", CreateBucketConfiguration : { LocationConstraint : 'sa-east-1' } 
+  }, function(err) {
+  if (err) {
+    console.log(err);
+    process.exit();
+  }
+  fs.createReadStream(__dirname + "/file.mp3")
+    .pipe(UploadStream(s3, { Bucket: "my-bucket", Key: key }))
+    .on("error", function (err) {
+      console.error(err);
+    })
+    .on("finish", function () {
+      console.log("File uploaded!");
+    });
+})
